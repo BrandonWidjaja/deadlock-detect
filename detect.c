@@ -8,12 +8,12 @@ typedef struct {
     int pID;
     int fLock;
     int fReq;
-    bool read;
+    int count;
 } process;
 
 /* Structure of a node */
 struct node {
-    int id, count, end;          // Data 
+    int id, count, end;// Data 
     struct node *next; // Address 
 }*head;
 
@@ -21,11 +21,12 @@ struct node {
  * Functions to create and display list
  */
 struct node* add(int i, int id, struct node *newNode, struct node *temp);
-void createList(size_t size, int startID);
+void createList(process* processes, size_t p_len, int currIndex);
 void traverseList();
 void freeList(struct node* head);
 struct node* find(int id);
 bool detectCycle();
+void findLinks(process* proccesses, process searching, size_t p_len, struct node *temp, struct node *newNode);
 
 void findDistinct(size_t p_len, process* processes); // Print number of distinct processes and files
 int computeExecuteTime(size_t p_len, process* proccesses);
@@ -77,34 +78,48 @@ int main(int argc, char* argv[]) {
         }   
         proccesses[p_len].pID = col1;
         proccesses[p_len].fLock = col2;
-        proccesses[p_len].read = false;
+        proccesses[p_len].count = 0;
         proccesses[p_len++].fReq = col3;
 
     }
 
     // Print nodes 
-    /*
+    
     for (int i = 0; i < p_len; i++) {
         process proccess = proccesses[i];
         printf("%d %d %d\n", proccess.pID, proccess.fLock, proccess.fReq);
-    } */
+    } 
 
+    
     if (fFlag == true){
         findDistinct(p_len, proccesses);
     }
+    
     if (eFlag == true){
         printf("Execution time %d\n", computeExecuteTime(p_len, proccesses));
+    } else {
+        for (int i = 0; i < p_len; i++){
+            createList(proccesses, p_len, i);
+            
+            freeList(head);
+            
+        }
+        
     }
-
-    createList(p_len, proccesses[1].pID);
-    traverseList();
-
+    
     free(proccesses);
     fclose(fp);
-
     
     return 0;
 }
+
+
+
+
+
+
+
+
 
 // Print number of distinct processes and files
 void findDistinct(size_t p_len, process* proccesses){
@@ -133,6 +148,14 @@ void findDistinct(size_t p_len, process* proccesses){
     printf("Processes %zu\nFiles %d\n", p_len, fNum);
 }
 
+
+
+
+
+
+
+
+
 // Find the minimum execution time
 int computeExecuteTime(size_t p_len, process* proccesses){
     int LOCKTIME = 1; // Locking and releasing all files costs 1 time unit
@@ -160,12 +183,16 @@ int computeExecuteTime(size_t p_len, process* proccesses){
     return maxReqCount + LOCKTIME;
 }
 
+
+
+
+
 /*
  * Create a list of n nodes
  */
-void createList(size_t size, int startID){
-    struct node *newNode, *temp;
-    int id, i;
+void createList(process* proccesses, size_t p_len, int currIndex){
+    struct node *newNode = NULL, *temp;
+    int i;
 
     head = (struct node *)malloc(sizeof(struct node));
 
@@ -176,7 +203,7 @@ void createList(size_t size, int startID){
         exit(0);
     }
 
-    head->id = startID; // Link data field with data
+    head->id = proccesses[currIndex].pID; // Link data field with data
     head->count = 0; 
     head->end = 0;
     head->next = NULL; // Link address field to NULL
@@ -184,18 +211,31 @@ void createList(size_t size, int startID){
 
     // Create n - 1 nodes and add to list
     temp = head;
-    for(i=2; i<=size; i++){
-      
-        temp = add(i, i, newNode, temp);
-        printf("\n");
-        /*if (temp->id == 5){
-            temp->next = find(3);
-            temp->end = 1;
-        }*/
+    process searching = proccesses[currIndex];
+    //printf("Start at: %d\n", startIndex);
+    for (i = 0; i < p_len; i++){
+        //printf("Comparing %d (%d) to %d (%d)\n", searching.pID, searching.fReq, proccesses[i].pID, proccesses[i].fLock);
+        if (searching.fReq == proccesses[i].fLock){
+            temp = add(i, proccesses[i].pID, newNode, temp);
+            for (int j = 0; j < p_len; j++){
+                if (proccesses[i].pID == proccesses[j].pID){
+                    searching = proccesses[j];
+                }
+            }
+        }
     }
-
+    
+    
+    traverseList();
+    printf("\n");
 
 }
+
+
+
+
+
+
 
 struct node* add(int i, int id, struct node *newNode, struct node *temp){
     newNode = (struct node *)malloc(sizeof(struct node));
@@ -205,11 +245,15 @@ struct node* add(int i, int id, struct node *newNode, struct node *temp){
     newNode->next = NULL; // Make sure new node points to NULL 
 
     temp->next = newNode; // Link previous node with newNode
-    traverseList();
-  
+    
+    
     return temp->next;    // Make current node as previous node
   
 }
+
+
+
+
 
 /*
  * Display entire list
@@ -226,10 +270,14 @@ void traverseList()
     
     temp = head;
     while(temp != NULL){
-        printf("%d (%d) -> ", temp->id, temp->count); // Print data of current node
+        printf("%d -> ", temp->id); // Print data of current node
         temp = temp->next;                 // Move to next node
     }
+    
 }
+
+
+
 
 void freeList(struct node* head){
    struct node* tmp;
@@ -239,6 +287,9 @@ void freeList(struct node* head){
        free(tmp);
     }
 }
+
+
+
 
 struct node* find(int id) {
 
@@ -252,18 +303,22 @@ struct node* find(int id) {
 
    //navigate through list
    while(current->id != id) {
-        //if it is last node
-        if(current->next == NULL) {
-            return NULL;
-        } else {
+	
+      //if it is last node
+      if(current->next == NULL) {
+         return NULL;
+      } else {
          //go to next link
-            current = current->next;
-        }
+         current = current->next;
+      }
    }      
 	
    //if data found, return the current Link
    return current;
 }
+
+
+
 
 bool detectCycle(){
     struct node *temp;
@@ -281,9 +336,9 @@ bool detectCycle(){
         if (temp->count == 2){
             return true;
         }
+
         temp = temp->next;
     }
+    traverseList();
     return false;
 }
-
-
