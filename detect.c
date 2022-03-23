@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
             
         }
         if (numDeadlocks == 0){
-            printf("No deadlock\n");
+            printf("No deadlocks\n");
         } else{
             printf("Deadlock detected\nTerminate ");
         }
