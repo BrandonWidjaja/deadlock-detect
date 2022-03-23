@@ -269,6 +269,7 @@ void createList(process* proccesses, size_t p_len, int currIndex){
             for (int j = 0; j < p_len; j++){
                 if (proccesses[i].pID == proccesses[j].pID){
                     searching = proccesses[j];
+                    i = 0;
                 }
             }
         }
