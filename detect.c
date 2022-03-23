@@ -84,11 +84,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Print nodes 
-    
+    /*
     for (int i = 0; i < p_len; i++) {
         process proccess = proccesses[i];
         printf("%d %d %d\n", proccess.pID, proccess.fLock, proccess.fReq);
-    } 
+    } */
 
     
     if (fFlag == true){
@@ -98,12 +98,66 @@ int main(int argc, char* argv[]) {
     if (eFlag == true){
         printf("Execution time %d\n", computeExecuteTime(p_len, proccesses));
     } else {
+        int deadlocked[p_len];
+        int numDeadlocks = 0; 
         for (int i = 0; i < p_len; i++){
+
+            bool isDeadlocked = false;
+            
+              
+            int count = 0;
+
             createList(proccesses, p_len, i);
             
+            struct node *temp;
+            struct node *tempCompare;
+
+            temp = head;
+            
+            
+            while (temp != NULL){
+                tempCompare = head;
+                count = 0;
+                while (tempCompare != NULL){
+                    if (temp->id == tempCompare->id){
+                        count++;
+                    }
+                    tempCompare = tempCompare->next;
+                }
+                if (count > 1){
+                    isDeadlocked = true;
+                }
+                
+                temp = temp->next;          // Move to next node
+            }
+
+            if (isDeadlocked == true){
+                temp = head;
+                int min = temp->id;
+                while(temp != NULL){
+                    if (temp->id < min){
+                        min = temp->id;
+                    }
+                    temp = temp->next; 
+                }
+                deadlocked[numDeadlocks] = min;
+                numDeadlocks++;
+            }
+            
+            
+            //printf("num: %d\n", numDeadlocks);
             freeList(head);
             
         }
+        if (numDeadlocks == 0){
+            printf("No deadlock\n");
+        } else{
+            printf("Deadlock detected\nTerminate ");
+        }
+        for (int i = 0; i < numDeadlocks; i++){
+                printf("%d ", deadlocked[i]);
+        }
+        printf("\n");
         
     }
     
@@ -112,11 +166,6 @@ int main(int argc, char* argv[]) {
     
     return 0;
 }
-
-
-
-
-
 
 
 
@@ -227,7 +276,7 @@ void createList(process* proccesses, size_t p_len, int currIndex){
     
     
     traverseList();
-    printf("\n");
+    //printf("\n");
 
 }
 
@@ -270,7 +319,7 @@ void traverseList()
     
     temp = head;
     while(temp != NULL){
-        printf("%d -> ", temp->id); // Print data of current node
+        //printf("%d -> ", temp->id); // Print data of current node
         temp = temp->next;                 // Move to next node
     }
     
@@ -318,27 +367,3 @@ struct node* find(int id) {
 }
 
 
-
-
-bool detectCycle(){
-    struct node *temp;
-
-    // Return if list is empty 
-    if(head == NULL){
-        return false;
-    }
-    
-    temp = head;
-    while(temp != NULL && temp->count != 2){
-        temp->count = temp->count + 1; // Print data of current node
-        printf("%d\n", temp->count);
-
-        if (temp->count == 2){
-            return true;
-        }
-
-        temp = temp->next;
-    }
-    traverseList();
-    return false;
-}
