@@ -9,27 +9,17 @@ typedef struct {
     int fLock;
     int fReq;
     int count;
+    bool searched;
 } process;
-
-/* Structure of a node */
-struct node {
-    int id, count, end;// Data 
-    struct node *next; // Address 
-}*head;
 
 /* 
  * Functions to create and display list
  */
-struct node* add(int i, int id, struct node *newNode, struct node *temp);
-void createList(process* processes, size_t p_len, int currIndex);
-void traverseList();
-void freeList(struct node* head);
-struct node* find(int id);
-bool detectCycle();
-void findLinks(process* proccesses, process searching, size_t p_len, struct node *temp, struct node *newNode);
+
 
 void findDistinct(size_t p_len, process* processes); // Print number of distinct processes and files
 int computeExecuteTime(size_t p_len, process* proccesses);
+void findDeadlocks(process* processes, size_t p_len, int currIndex);
 
 
 int main(int argc, char* argv[]) {
@@ -42,7 +32,6 @@ int main(int argc, char* argv[]) {
     for (args = 0; args < argc; args++){
         if (strcmp("-f", argv[args]) == 0){
             fFlag = true;
-            //printf("file read\n");
             filearg = ++args;
         }
         if (strcmp("-e", argv[args]) == 0){
@@ -78,84 +67,66 @@ int main(int argc, char* argv[]) {
         }   
         proccesses[p_len].pID = col1;
         proccesses[p_len].fLock = col2;
+        proccesses[p_len].searched = false;
         proccesses[p_len].count = 0;
         proccesses[p_len++].fReq = col3;
 
     }
 
-    // Print nodes 
-    /*
-    for (int i = 0; i < p_len; i++) {
-        process proccess = proccesses[i];
-        printf("%d %d %d\n", proccess.pID, proccess.fLock, proccess.fReq);
-    } */
-
-    
     if (fFlag == true){
         findDistinct(p_len, proccesses);
     }
     
     if (eFlag == true){
         printf("Execution time %d\n", computeExecuteTime(p_len, proccesses));
-    } else {
-        int deadlocked[p_len];
-        int numDeadlocks = 0; 
+    } else { 
+
+        int deadLockedMins[p_len];
+        int deadlockCount = 0;
+
         for (int i = 0; i < p_len; i++){
+            if (proccesses[i].searched == false){
 
-            bool isDeadlocked = false;
-            
-              
-            int count = 0;
+                bool isDeadlocked = false;
+                int deadArray[p_len];
+                int deadCount = 0;
 
-            createList(proccesses, p_len, i);
-            
-            struct node *temp;
-            struct node *tempCompare;
+                findDeadlocks(proccesses, p_len, i);
 
-            temp = head;
-            
-            
-            while (temp != NULL){
-                tempCompare = head;
-                count = 0;
-                while (tempCompare != NULL){
-                    if (temp->id == tempCompare->id){
-                        count++;
+                for (int k = 0; k <p_len; k++){
+                    if (proccesses[k].count == 2){
+                        deadArray[deadCount] = proccesses[k].pID;
+                        proccesses[k].searched = true;
+                        deadCount++;
                     }
-                    tempCompare = tempCompare->next;
                 }
-                if (count > 1){
-                    isDeadlocked = true;
-                }
-                
-                temp = temp->next;          // Move to next node
-            }
 
-            if (isDeadlocked == true){
-                temp = head;
-                int min = temp->id;
-                while(temp != NULL){
-                    if (temp->id < min){
-                        min = temp->id;
+                if (deadCount > 1){
+                    int currMin = deadArray[0];
+                    for (int k = 0; k <deadCount; k++){
+                        if (deadArray[k] < currMin){
+                            currMin = deadArray[k];
+                        }
                     }
-                    temp = temp->next; 
+                    deadLockedMins[deadlockCount] = currMin;
+                    deadlockCount++;
+                    
                 }
-                deadlocked[numDeadlocks] = min;
-                numDeadlocks++;
+
+                for (int k = 0; k <p_len; k++){
+                    proccesses[k].count = 0;
+                }
+
             }
-            
-            
-            //printf("num: %d\n", numDeadlocks);
-            freeList(head);
-            
         }
-        if (numDeadlocks == 0){
-            printf("No deadlocks\n");
+
+        if (deadlockCount == 0){
+            printf("No deadlocks");
         } else{
             printf("Deadlock detected\nTerminate ");
         }
-        for (int i = 0; i < numDeadlocks; i++){
-                printf("%d ", deadlocked[i]);
+        for (int i = 0; i < deadlockCount; i++){
+                printf("%d ", deadLockedMins[i]);
         }
         printf("\n");
         
@@ -166,7 +137,6 @@ int main(int argc, char* argv[]) {
     
     return 0;
 }
-
 
 
 
@@ -199,12 +169,6 @@ void findDistinct(size_t p_len, process* proccesses){
 
 
 
-
-
-
-
-
-
 // Find the minimum execution time
 int computeExecuteTime(size_t p_len, process* proccesses){
     int LOCKTIME = 1; // Locking and releasing all files costs 1 time unit
@@ -234,137 +198,36 @@ int computeExecuteTime(size_t p_len, process* proccesses){
 
 
 
-
-
 /*
  * Create a list of n nodes
  */
-void createList(process* proccesses, size_t p_len, int currIndex){
-    struct node *newNode = NULL, *temp;
-    int i;
-
-    head = (struct node *)malloc(sizeof(struct node));
-
-    // Terminate if memory not allocated
-    if(head == NULL)
-    {
-        printf("Unable to allocate memory.");
-        exit(0);
-    }
-
-    head->id = proccesses[currIndex].pID; // Link data field with data
-    head->count = 0; 
-    head->end = 0;
-    head->next = NULL; // Link address field to NULL
-
-
-    // Create n - 1 nodes and add to list
-    temp = head;
+void findDeadlocks(process* proccesses, size_t p_len, int currIndex){
+    
+    bool found = false;
+    int loops = 0;
     process searching = proccesses[currIndex];
-    //printf("Start at: %d\n", startIndex);
-    for (i = 0; i < p_len; i++){
-        //printf("Comparing %d (%d) to %d (%d)\n", searching.pID, searching.fReq, proccesses[i].pID, proccesses[i].fLock);
-        if (searching.fReq == proccesses[i].fLock){
-            temp = add(i, proccesses[i].pID, newNode, temp);
-            for (int j = 0; j < p_len; j++){
-                if (proccesses[i].pID == proccesses[j].pID){
-                    searching = proccesses[j];
-                    
+
+    proccesses[currIndex].count = 1;
+    
+    while (found == false && loops < p_len){
+
+        for (int i = 0; i < p_len; i++){
+
+            if (searching.fReq == proccesses[i].fLock){
+
+                proccesses[i].count++;
+                
+                for (int j = 0; j < p_len; j++){
+                    if (proccesses[i].pID == proccesses[j].pID){
+                        searching = proccesses[j];
+                    }
+                }
+
+                if (proccesses[i].count > 1){
+                    found = true; 
                 }
             }
         }
-    }
-    
-    
-    traverseList();
-    //printf("\n");
-
-}
-
-
-
-
-
-
-
-struct node* add(int i, int id, struct node *newNode, struct node *temp){
-    newNode = (struct node *)malloc(sizeof(struct node));
-
-    newNode->id = id; // Link data field of newNode
-    newNode->count = 0;
-    newNode->next = NULL; // Make sure new node points to NULL 
-
-    temp->next = newNode; // Link previous node with newNode
-    
-    
-    return temp->next;    // Make current node as previous node
-  
-}
-
-
-
-
-
-/*
- * Display entire list
- */
-void traverseList()
-{
-    struct node *temp;
-
-    // Return if list is empty 
-    if(head == NULL){
-        printf("List empty.");
-        return;
-    }
-    
-    temp = head;
-    while(temp != NULL){
-        //printf("%d -> ", temp->id); // Print data of current node
-        temp = temp->next;                 // Move to next node
-    }
-    
-}
-
-
-
-
-void freeList(struct node* head){
-   struct node* tmp;
-   while (head != NULL && head->end != 1){
-       tmp = head;
-       head = head->next;
-       free(tmp);
+        loops++;
     }
 }
-
-
-
-
-struct node* find(int id) {
-
-   //start from the first link
-   struct node* current = head;
-
-   //if list is empty
-   if(head == NULL) {
-      return NULL;
-   }
-
-   //navigate through list
-   while(current->id != id) {
-	
-      //if it is last node
-      if(current->next == NULL) {
-         return NULL;
-      } else {
-         //go to next link
-         current = current->next;
-      }
-   }      
-	
-   //if data found, return the current Link
-   return current;
-}
-
-
