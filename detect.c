@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < p_len; i++){
             if (proccesses[i].searched == false){
 
-                bool isDeadlocked = false;
                 int deadArray[p_len];
                 int deadCount = 0;
 
