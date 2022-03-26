@@ -22,6 +22,7 @@ void findDistinct(size_t p_len, process* processes); // Print number of distinct
 int computeExecuteTime(size_t p_len, process* proccesses);
 void findDeadlocks(size_t p_len, process* proccesses);
 void searchProcess(process* processes, size_t p_len, int currIndex);
+int compare( const void* a, const void* b);
 
 
 int main(int argc, char* argv[]) {
@@ -189,18 +190,22 @@ void findDeadlocks(size_t p_len, process* proccesses){
 
             // store processes that are in deadlock cycle
             for (k = 0; k <p_len; k++){
-                if (proccesses[k].count == 2){
+                
+                if (proccesses[k].count > 1){
+                    
                     deadArray[deadCount] = proccesses[k].pID;
                     proccesses[k].searched = true;
                     deadCount++;
                 }
             }
+        
             
             // if deadlock detected, store the process with smallest ID in deadLockedMins
             if (deadCount > 1){
                 int currMin = deadArray[0];
                 bool alreadyRecorded = false;
                 for (k = 0; k < deadCount; k++){
+                    
                     if (deadArray[k] < currMin){
                         currMin = deadArray[k];
                     }
@@ -234,6 +239,9 @@ void findDeadlocks(size_t p_len, process* proccesses){
     } else{
         printf("Deadlock detected\nTerminate");
     }
+    // sort output
+    qsort(deadLockedMins, deadlockCount, sizeof(int), compare); 
+
     for (int i = 0; i < deadlockCount; i++){
         printf(" %d", deadLockedMins[i]);
     }
@@ -249,34 +257,52 @@ void searchProcess(process* proccesses, size_t p_len, int currIndex){
     
     bool found = false; // deadlock found
     int loops = 0; // while loop termination
+    int j;
     process searching = proccesses[currIndex]; // repeat search from this process
 
     proccesses[currIndex].count++; // mark the process as searched
     
     // keep searching until all processes searched, or deadlock found
-    while (found == false && loops < p_len){
+    while (found == false && loops < p_len + 1){
 
         for (int i = 0; i < p_len; i++){
 
             // mark link between processes depending on files
             if (searching.fReq == proccesses[i].fLock){
-
+                // terminate search if deadlock found
+                
                 proccesses[i].count++; // mark as searched
                 
-                for (int j = 0; j < p_len; j++){
+                for (j = 0; j < p_len; j++){
+                    if (proccesses[j].count > 2){
+                        found = true;
+                        break;
+                    }
                     // search from process that is linked
                     if (proccesses[i].pID == proccesses[j].pID){
                         searching = proccesses[j];
                     }
                 }
                 
-                // terminate search if deadlock found
-                if (proccesses[i].count > 1){
-                    found = true; 
-                }
+                
+                
             }
         }
 
         loops++;
     }
+}
+
+/*
+ * comparison function for quicksort
+ */
+int compare(const void* a, const void* b){
+     int intA = * ( (int*) a );
+     int intB = * ( (int*) b );
+
+     if ( intA == intB ){
+         return 0;
+     }else if( intA < intB ){
+         return -1;
+     }else return 1;
 }
