@@ -199,13 +199,24 @@ void findDeadlocks(size_t p_len, process* proccesses){
             // if deadlock detected, store the process with smallest ID in deadLockedMins
             if (deadCount > 1){
                 int currMin = deadArray[0];
-                for (k = 0; k <deadCount; k++){
+                bool alreadyRecorded = false;
+                for (k = 0; k < deadCount; k++){
                     if (deadArray[k] < currMin){
                         currMin = deadArray[k];
                     }
                 }
-                deadLockedMins[deadlockCount] = currMin;
-                deadlockCount++;
+
+                // only add process if not already recorded
+                for (k = 0; k < deadlockCount; k++){
+                    if (currMin == deadLockedMins[k]){
+                        alreadyRecorded = true;
+                    }
+                }
+                if (alreadyRecorded == false){
+                    deadLockedMins[deadlockCount] = currMin;
+                    deadlockCount++;
+                }
+                
                     
             }
 
