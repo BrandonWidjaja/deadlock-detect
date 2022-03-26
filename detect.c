@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FILE_LOCKTIME 1;
+#define FILE_LOCKTIME 1
+#define FILES_PER_LINE 2
 
 // Definition of a process
 typedef struct {
@@ -25,6 +26,10 @@ void searchProcess(process* processes, size_t p_len, int currIndex);
 
 int main(int argc, char* argv[]) {
     
+    /* 
+     * Input into struct adapted from COMP30023_2022_SM1 C File IO Introduction (v2) 
+     * University of Melbourne 
+     */
     int args, filearg = 1;
 
     // Flags
@@ -55,10 +60,7 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    /* 
-     * Input into struct adapted from COMP30023_2022_SM1 C File IO Introduction (v2) 
-     * University of Melbourne 
-     */
+    
     int col1, col2, col3;
     while (fscanf(fp, "%d %d %d", &col1, &col2, &col3) == 3) {
         if (p_len == p_size) {
@@ -78,7 +80,6 @@ int main(int argc, char* argv[]) {
     }
 
     // functions called based on input flags
-
     if (fFlag == true){
         findDistinct(p_len, proccesses);
     }
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]) {
  */
 void findDistinct(size_t p_len, process* proccesses){
     int fNum = 0, fCount = 0; // number of files, count of current file
-    int fAll[p_len*2]; // array of unique files
+    int fAll[p_len*FILES_PER_LINE]; // array of unique files
     int i;
     
     // Add all files to fAll array
