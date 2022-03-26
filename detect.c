@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (eFlag == true){
-        printf("Execution time %d\n", computeExecuteTime(p_len, proccesses));
+        printf("Execution time %d", computeExecuteTime(p_len, proccesses));
     } else { 
 
         int deadLockedMins[p_len];
@@ -122,15 +122,15 @@ int main(int argc, char* argv[]) {
         if (deadlockCount == 0){
             printf("No deadlocks");
         } else{
-            printf("Deadlock detected\nTerminate ");
+            printf("Deadlock detected\nTerminate");
         }
         for (int i = 0; i < deadlockCount; i++){
-                printf("%d ", deadLockedMins[i]);
+                printf(" %d", deadLockedMins[i]);
         }
-        printf("\n");
+        
         
     }
-    
+    printf("\n");
     free(proccesses);
     fclose(fp);
     
