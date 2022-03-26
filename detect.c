@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define FILE_LOCKTIME 1;
+
 // Definition of a process
 typedef struct {
     int pID;
@@ -13,13 +15,12 @@ typedef struct {
 } process;
 
 /* 
- * Functions to create and display list
+ * Forward declarations
  */
-
-
 void findDistinct(size_t p_len, process* processes); // Print number of distinct processes and files
 int computeExecuteTime(size_t p_len, process* proccesses);
-void findDeadlocks(process* processes, size_t p_len, int currIndex);
+void findDeadlocks(size_t p_len, process* proccesses);
+void searchProcess(process* processes, size_t p_len, int currIndex);
 
 
 int main(int argc, char* argv[]) {
@@ -54,7 +55,10 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Input into struct adapted from COMP30023_2022_SM1 C File IO Introduction (v2) University of Melbourne
+    /* 
+     * Input into struct adapted from COMP30023_2022_SM1 C File IO Introduction (v2) 
+     * University of Melbourne 
+     */
     int col1, col2, col3;
     while (fscanf(fp, "%d %d %d", &col1, &col2, &col3) == 3) {
         if (p_len == p_size) {
@@ -73,63 +77,20 @@ int main(int argc, char* argv[]) {
 
     }
 
+    // functions called based on input flags
+
     if (fFlag == true){
         findDistinct(p_len, proccesses);
     }
-    
+
     if (eFlag == true){
         printf("Execution time %d", computeExecuteTime(p_len, proccesses));
     } else { 
 
-        int deadLockedMins[p_len];
-        int deadlockCount = 0;
-
-        for (int i = 0; i < p_len; i++){
-            if (proccesses[i].searched == false){
-
-                int deadArray[p_len];
-                int deadCount = 0;
-
-                findDeadlocks(proccesses, p_len, i);
-
-                for (int k = 0; k <p_len; k++){
-                    if (proccesses[k].count == 2){
-                        deadArray[deadCount] = proccesses[k].pID;
-                        proccesses[k].searched = true;
-                        deadCount++;
-                    }
-                }
-
-                if (deadCount > 1){
-                    int currMin = deadArray[0];
-                    for (int k = 0; k <deadCount; k++){
-                        if (deadArray[k] < currMin){
-                            currMin = deadArray[k];
-                        }
-                    }
-                    deadLockedMins[deadlockCount] = currMin;
-                    deadlockCount++;
-                    
-                }
-
-                for (int k = 0; k <p_len; k++){
-                    proccesses[k].count = 0;
-                }
-
-            }
-        }
-
-        if (deadlockCount == 0){
-            printf("No deadlocks");
-        } else{
-            printf("Deadlock detected\nTerminate");
-        }
-        for (int i = 0; i < deadlockCount; i++){
-                printf(" %d", deadLockedMins[i]);
-        }
-        
+        findDeadlocks(p_len, proccesses);
         
     }
+
     printf("\n");
     free(proccesses);
     fclose(fp);
@@ -139,12 +100,16 @@ int main(int argc, char* argv[]) {
 
 
 
-// Print number of distinct processes and files
+/*
+ * Print number of distinct processes and files
+ */
 void findDistinct(size_t p_len, process* proccesses){
-    int fNum = 0, fCount = 0, fAll[p_len*2];
+    int fNum = 0, fCount = 0; // number of files, count of current file
+    int fAll[p_len*2]; // array of unique files
+    int i;
     
     // Add all files to fAll array
-    for (int i = 0; i < p_len; i++){
+    for (i = 0; i < p_len; i++){
         process proccess = proccesses[i];
         fAll[fCount] = proccess.fLock;
         ++fCount;
@@ -153,7 +118,7 @@ void findDistinct(size_t p_len, process* proccesses){
     }
 
     // Count number of distinct files in fAll
-    for (int i = 0; i < fCount; i++){
+    for (i = 0; i < fCount; i++){
         int j = 0;
         while (j != i && fAll[j] != fAll[i]){
             ++j;
@@ -168,20 +133,23 @@ void findDistinct(size_t p_len, process* proccesses){
 
 
 
-// Find the minimum execution time
+/*
+ * find the minimum execution time
+ */
 int computeExecuteTime(size_t p_len, process* proccesses){
-    int LOCKTIME = 1; // Locking and releasing all files costs 1 time unit
     int maxReqCount = 1;
 
+    // 0 execution time if no processes
     if(p_len < 1){
         return 0;
     }
 
+    // find the count of highest frequency requested file 
     for (int i = 0; i < p_len; i++){
         int currReqCount = 1;
         
         for (int j = i + 1; j < p_len; j++){
-            // Find count of request of highest frequency
+            
             if(proccesses[j].fReq == proccesses[i].fReq){
                 ++currReqCount;
                 if (currReqCount > maxReqCount){
@@ -192,41 +160,111 @@ int computeExecuteTime(size_t p_len, process* proccesses){
         currReqCount = 0;
     }
 
-    return maxReqCount + LOCKTIME;
+    // execution time is the highest frequency file count + 1
+    return maxReqCount + FILE_LOCKTIME;
 }
 
 
 
 /*
- * Create a list of n nodes
+ * finds deadlocks and prints processes that can be terminated to break deadlocks
  */
-void findDeadlocks(process* proccesses, size_t p_len, int currIndex){
-    
-    bool found = false;
-    int loops = 0;
-    process searching = proccesses[currIndex];
+void findDeadlocks(size_t p_len, process* proccesses){
+    int deadLockedMins[p_len]; // smallest process IDs that are part of a cycle
+    int deadlockCount = 0; // number of deadlocks
+    int i;
 
-    proccesses[currIndex].count = 1;
+    // search for deadlocked cycle from all processes that haven't been searched
+    for (i = 0; i < p_len; i++){
+
+        if (proccesses[i].searched == false){
+
+            int deadArray[p_len]; // array of processes in deadlock cycle from current search
+            int deadCount = 0; // number of processes in cycle from current search
+            int k;
+
+            // search processes connected to process search, and marked deadlocked processes
+            searchProcess(proccesses, p_len, i);
+
+            // store processes that are in deadlock cycle
+            for (k = 0; k <p_len; k++){
+                if (proccesses[k].count == 2){
+                    deadArray[deadCount] = proccesses[k].pID;
+                    proccesses[k].searched = true;
+                    deadCount++;
+                }
+            }
+            
+            // if deadlock detected, store the process with smallest ID in deadLockedMins
+            if (deadCount > 1){
+                int currMin = deadArray[0];
+                for (k = 0; k <deadCount; k++){
+                    if (deadArray[k] < currMin){
+                        currMin = deadArray[k];
+                    }
+                }
+                deadLockedMins[deadlockCount] = currMin;
+                deadlockCount++;
+                    
+            }
+
+            // reset processes counts (deadlock marks)
+            for (k = 0; k <p_len; k++){
+                proccesses[k].count = 0;
+            }
+
+        }
+    }
+
+    // output
+    if (deadlockCount == 0){
+        printf("No deadlocks");
+    } else{
+        printf("Deadlock detected\nTerminate");
+    }
+    for (int i = 0; i < deadlockCount; i++){
+        printf(" %d", deadLockedMins[i]);
+    }
+}
+
+
+
+/*
+ * searches branch from current process, looking for deadlocks and marking processes 
+ * that are part of the cycle
+ */
+void searchProcess(process* proccesses, size_t p_len, int currIndex){
     
+    bool found = false; // deadlock found
+    int loops = 0; // while loop termination
+    process searching = proccesses[currIndex]; // repeat search from this process
+
+    proccesses[currIndex].count++; // mark the process as searched
+    
+    // keep searching until all processes searched, or deadlock found
     while (found == false && loops < p_len){
 
         for (int i = 0; i < p_len; i++){
 
+            // mark link between processes depending on files
             if (searching.fReq == proccesses[i].fLock){
 
-                proccesses[i].count++;
+                proccesses[i].count++; // mark as searched
                 
                 for (int j = 0; j < p_len; j++){
+                    // search from process that is linked
                     if (proccesses[i].pID == proccesses[j].pID){
                         searching = proccesses[j];
                     }
                 }
-
+                
+                // terminate search if deadlock found
                 if (proccesses[i].count > 1){
                     found = true; 
                 }
             }
         }
+
         loops++;
     }
 }
