@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FILE_LOCKTIME 1
+#define FILE_LOCKTIME 1 // execution time for locked files is always 1
 #define FILES_PER_LINE 2
 
 // Definition of a process
@@ -19,10 +19,10 @@ typedef struct {
  * Forward declarations
  */
 void findDistinct(size_t p_len, process* processes); // Print number of distinct processes and files
-int computeExecuteTime(size_t p_len, process* proccesses);
-void findDeadlocks(size_t p_len, process* proccesses);
-void searchProcess(process* processes, size_t p_len, int currIndex);
-int compare( const void* a, const void* b);
+int computeExecuteTime(size_t p_len, process* proccesses); // Find execution time
+void findDeadlocks(size_t p_len, process* proccesses); // Find deadlocks in file
+void searchProcess(process* processes, size_t p_len, int currIndex); // Search deadlocks from process
+int compare( const void* a, const void* b); // Compare function for QSort
 
 
 int main(int argc, char* argv[]) {
@@ -292,6 +292,8 @@ void searchProcess(process* proccesses, size_t p_len, int currIndex){
         loops++;
     }
 }
+
+
 
 /*
  * comparison function for quicksort
