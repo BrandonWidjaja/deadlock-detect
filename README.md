@@ -4,13 +4,13 @@ A C project for Computer Systems course for detecting deadlocks.
 
 Given input such as the file test_case.txt:
 
-0 0 1\n
-2 1 0
-3 8 9
-4 9 8
-5 5 9
-10 10 5
-11 11 5
+0 0 1  
+2 1 0  
+3 8 9  
+4 9 8  
+5 5 9  
+10 10 5  
+11 11 5  
 
 
 where column one denotes the process ID, column 2 denotes the file ID which is currently locked by the process, and column 3 denotes the file ID which is needed. 
